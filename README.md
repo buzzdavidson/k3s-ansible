@@ -1,3 +1,84 @@
+# Buzzdavidson notes
+
+Forked from YouTube "techno tim" "The FASTEST Way to run Kubernetes at Home - k3s Ansible"
+
+Post-install
+
+Copy kube config locally:
+
+```bash
+    scp ubuntu@core-k3s-01.buzzdavidson.com:~/.kube/config ~/.kube/config
+```
+
+Deploy sample Nginx app:
+
+```bash
+kubectl apply -f example/deployment.yml
+kubectl describe deployment nginx
+kubectl apply -f example/service.yml
+kubectl describe service nginx
+```
+
+Set up traefik:
+
+```bash
+kubectl create namespace traefik
+kubectl get namespaces
+helm repo add traefik https://helm.traefik.io/traefik
+helm repo update
+cd ~/projects/launchpad/kubernetes/traefik-cert-manager/traefik  #dir for techno tim 'launchpad' repo
+helm install --namespace=traefik traefik traefik/traefik --values=values.yaml                                 
+kubectl apply -f default-headers.yaml
+kubectl get middleware
+```
+
+Expose traefik dashboard:
+
+```bash
+cd dashboard
+htpasswd -nb admin [password] | openssl base64
+# copy this credential value to clipboard
+# edit secret-dashboard.yaml and copy password
+kubectl apply -f secret-dashboard.yaml
+kubectl get secrets --namespace traefik
+# edit ingress.yaml and make sure host is traefik.buzzdavidson.com; this host should dns map to the external ip address of the traefik service
+kubectl apply -f middleware.yaml
+kubectl apply -f ingress.yaml
+# browser navigate to traefik.buzzdavidson.com; confirm security exception, we havent set up SSL yet
+```
+
+Install cert manager:
+
+```bash
+cd ../../cert-manager
+kubectl create namespace cert-manager
+kubectl get namespaces
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.crds.yaml
+helm install cert-manager jetstack/cert-manager --namespace cert-manager --values=values.yaml --version v1.9.1
+kubectl get pods --namespace cert-manager
+# update issuers/letsencrypt-staging.yaml and issuers/secret-cf-token
+kubectl apply -f issuers/secret-cf-token.yaml 
+kubectl apply -f issuers/letsencrypt-production.yaml
+# cp certificates/staging/local-example-com.yaml certificates/staging/buzzdavidson-com.yaml
+# edit buzzdavidson-com.yaml
+kubectl apply -f certificates/production/buzzdavidson-com.yaml
+kubectl get pods --namespace cert-manager
+kubectl logs -n cert-manager -f cert-manager-xxxx
+kubectl get challenges
+kubectl get certificate
+``
+`
+
+Test with nginx:
+
+```bash
+cd ..
+# edit nginx/ingress.yaml; tls.secretname should be same as certificates/staging/buzzdavidson-com.yaml (local-buzzdavidson-com-staging-tls)
+kubectl apply -f nginx
+```
+
+
+
 # Automated build of HA k3s Cluster with `kube-vip` and MetalLB
 
 ![Fully Automated K3S etcd High Availability Install](https://img.youtube.com/vi/CbkEWcUZ7zM/0.jpg)
