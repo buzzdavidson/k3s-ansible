@@ -10,6 +10,19 @@ Copy kube config locally:
     scp ubuntu@core-k3s-01.buzzdavidson.com:~/.kube/config ~/.kube/config
 ```
 
+Install helm repo for argocd:
+
+```bash
+helm repo add argo https://argoproj.github.io/argo-helm
+helm repo update
+helm search repo argocd
+
+# see default values in case you want to override something 
+helm show values argo/argo-cd --version 3.35.4 > argocd-defaults.yaml
+```
+
+Note: everything below should be replaced via argo and terraform
+
 Deploy sample Nginx app:
 
 ```bash
